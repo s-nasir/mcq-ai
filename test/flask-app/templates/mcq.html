@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>MCQ Quiz</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .option {
+      cursor: pointer;
+    }
+    .option-label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .correct {
+      background-color: #d4edda; /* Green for correct */
+      color: #155724;
+    }
+    .incorrect {
+      background-color: #f8d7da; /* Red for incorrect */
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+  <div class="container mt-5">
+    <h2 class="text-center">Quiz</h2>
+    <div id="quiz-box" class="card p-4 mt-4">
+      <h5 id="question" class="card-title"></h5>
+      <div id="options-container" class="options"></div>
+      <div id="ai-response" class="mt-3"></div>
+      <button id="next-button" class="btn btn-primary mt-3" onclick="nextQuestion()" disabled>Next</button>
+    </div>
+  </div>
+
+  <script>
+    const quizData = {{ quiz_data|tojson }};
+    let currentQuestionIndex = 0;
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function renderQuestion() {
+      const questionData = quizData[currentQuestionIndex];
+      const questionElement = document.getElementById("question");
+      const optionsContainer = document.getElementById("options-container");
+      const nextButton = document.getElementById("next-button");
+
+      questionElement.innerText = questionData.question;
+      optionsContainer.innerHTML = "";
+      nextButton.disabled = true;
+
+      Object.entries(questionData.options).forEach(([label, option], index) => {
+        const optionElement = document.createElement("p");
+        optionElement.classList.add("option", "btn", "btn-outline-primary");
+        optionElement.onclick = () => handleSelection(optionElement, questionData, label, option);
+        optionElement.innerHTML = `<span class="option-label">${label}.</span> ${option}`;
+        optionsContainer.appendChild(optionElement);
+      });
+    }
+
+    function handleSelection(selectedOption, questionData, label, option) {
+      document.querySelectorAll('.option').forEach(option => option.onclick = null);
+      const nextButton = document.getElementById("next-button");
+
+      if (label === questionData.correct_answer) {
+        selectedOption.classList.add("correct");
+      } else {
+        selectedOption.classList.add("incorrect");
+        document.querySelectorAll('.option').forEach(opt => {
+          if (opt.innerText.includes(questionData.options[questionData.correct_answer])) {
+            opt.classList.add("correct");
+          }
+        });
+      }
+
+      getAIResponse(questionData);
+      nextButton.disabled = false;
+    }
+
+    async function getAIResponse(questionData) {
+      const aiResponseContainer = document.getElementById("ai-response");
+      aiResponseContainer.innerText = "Loading AI response...";
+
+      const response = await fetch("/get-ai-response", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: questionData.question,
+          options: questionData.options
+        })
+      });
+      const result = await response.json();
+      aiResponseContainer.innerText = result.ai_response;
+    }
+
+    function nextQuestion() {
+      currentQuestionIndex++;
+      if (currentQuestionIndex < quizData.length) {
+        renderQuestion();
+        document.getElementById("ai-response").innerText = "";
+      } else {
+        showResults();
+      }
+    }
+
+    function showResults() {
+      const quizBox = document.getElementById("quiz-box");
+      quizBox.innerHTML = `<h5 class="text-center">Quiz Completed!</h5><p class="text-center">Thank you for participating.</p>`;
+    }
+
+    document.addEventListener("DOMContentLoaded", renderQuestion);
+  </script>
+
+  <!-- Bootstrap JS and dependencies -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.0/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

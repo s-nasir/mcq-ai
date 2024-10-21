@@ -1,0 +1,5 @@
+test/apps/
+test/data-prep/venv/
+test/flask-app/venv/
+test/flask-app/__pycache__/
+
