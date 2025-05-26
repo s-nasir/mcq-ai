@@ -1,112 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prompt Machine</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            padding: 20px;
-        }
-        h1 {
-            font-size: 2.5em;
-            color: #333;
-            margin-bottom: 20px;
-        }
-        .form-label {
-            font-weight: bold;
-            font-size: 1.2em;
-            color: #555;
-        }
-        #prompt {
-            width: 100%;
-            height: 120px;
-            padding: 15px;
-            font-size: 1em;
-            margin-top: 10px;
-            resize: vertical;
-            border: 1px solid #ced4da;
-            border-radius: 5px;
-        }
-        .btn-submit, .btn-new-prompt {
-            padding: 12px 25px;
-            font-size: 1.1em;
-            font-weight: bold;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .btn-submit {
-            background-color: #007bff;
-        }
-        .btn-submit:hover {
-            background-color: #0056b3;
-        }
-        .btn-new-prompt {
-            background-color: #28a745;
-            text-decoration: none;
-        }
-        .btn-new-prompt:hover {
-            background-color: #218838;
-        }
-        .response-box {
-            padding: 20px;
-            background-color: #ffffff;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            margin-top: 25px;
-            font-size: 1.1em;
-            line-height: 1.6em;
-            white-space: pre-wrap;
-        }
-        .input-box {
-            padding: 20px;
-            background-color: #e9ecef;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            margin-top: 20px;
-            font-size: 1em;
-            color: #333;
-            white-space: pre-wrap;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Prompt Machine</title>
+  <link
+    href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <style>
+    body { background:#f5f5f5; padding:2rem; font-family:Arial,sans-serif; }
+    .box { margin-top:1.5rem; padding:1rem; background:#fff; border-radius:.5rem; border:1px solid #ddd; white-space:pre-wrap; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="text-center">Prompt Machine</h1>
-        <form action="/prompt-box" method="POST">
-            <div class="form-group">
-                <label for="prompt" class="form-label">Enter your prompt:</label>
-                <textarea id="prompt" name="prompt" class="form-control" required></textarea>
-            </div>
-            <div class="text-center">
-                <button type="submit" class="btn btn-submit">Submit</button>
-            </div>
-        </form>
-
-        {% if response %}
-            <h2>Submitted Prompt</h2>
-            <div class="input-box">
-                {{ request.form["prompt"] }}
-            </div>
-            <h2 class="mt-4">Response from AI</h2>
-            <div class="response-box">
-                {{ response }}
-            </div>
-            <div class="text-center mt-4">
-                <a href="/prompt-box" class="btn btn-new-prompt">New Prompt</a>
-            </div>
-        {% endif %}
+  <nav>
+    <div class="row justify-content-md-center">
+      <div class="col col-lg-2">
+      <a href="/" class="btn btn-outline-danger btn-lg btn-block ml-2">Home</a>
+      </div>
+      <div class="col col-lg-2">
+      <a href="/mcq" class="btn btn-outline-danger btn-lg btn-block mr-2">MCQ</a>
+      </div>
     </div>
+  </nav>
 
-    <!-- Bootstrap JS and dependencies -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.0/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <div class="container">
+    <h1 class="text-center mt-5">Prompt Machine</h1>
+    <form method="POST">
+      <div class="form-group">
+        <label for="prompt">Enter your structured prompt:</label>
+        <textarea id="prompt" name="prompt" class="form-control" rows="4" required>{{ prompt or "" }}</textarea>
+      </div>
+      <div class="text-center">
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </div>
+    </form>
+
+    {% if result %}
+      {% if result.error %}
+        <div class="alert alert-danger mt-4">{{ result.error }}</div>
+      {% else %}
+        <h2 class="mt-4">AI Structured Response</h2>
+        <div class="container">
+          <p><strong>Correct Answer:</strong> {{ result["Correct Answer"] }}</p>
+          <p><strong>Option Analysis:</strong></p>
+          <ul>
+            {% for opt, text in result["Option Analysis"].items() %}
+              <li><strong>{{ opt }}:</strong> {{ text }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="text-center mt-4">
+          <a href="/prompt-box" class="btn btn-success">New Prompt</a>
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
 </body>
 </html>

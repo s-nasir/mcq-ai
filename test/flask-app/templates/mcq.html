@@ -7,6 +7,11 @@
   <!-- Bootstrap CSS -->
   <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
   <style>
+    body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
     .option {
       cursor: pointer;
     }
@@ -25,6 +30,16 @@
   </style>
 </head>
 <body>
+  <nav>
+    <div class="row justify-content-md-center">
+      <div class="col col-lg-2">
+      <a href="/" class="btn btn-outline-danger btn-lg btn-block ml-2">Home</a>
+      </div>
+      <div class="col col-lg-2">
+      <a href="/prompt-box" class="btn btn-outline-danger btn-lg btn-block mr-2">Prompts</a>
+      </div>
+    </div>
+  </nav>
   <div class="container mt-5">
     <h2 class="text-center">Quiz</h2>
     <div id="quiz-box" class="card p-4 mt-4">
@@ -39,14 +54,6 @@
     const quizData = {{ quiz_data|tojson }};
     let currentQuestionIndex = 0;
 
-    function shuffle(array) {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
-    }
-
     function renderQuestion() {
       const questionData = quizData[currentQuestionIndex];
       const questionElement = document.getElementById("question");
@@ -56,26 +63,29 @@
       questionElement.innerText = questionData.question;
       optionsContainer.innerHTML = "";
       nextButton.disabled = true;
+      document.getElementById("ai-response").innerHTML = "";
 
-      Object.entries(questionData.options).forEach(([label, option], index) => {
+      Object.entries(questionData.options).forEach(([label, option]) => {
         const optionElement = document.createElement("p");
         optionElement.classList.add("option", "btn", "btn-outline-primary");
-        optionElement.onclick = () => handleSelection(optionElement, questionData, label, option);
-        optionElement.innerHTML = `<span class="option-label">${label}.</span> ${option}`;
+        optionElement.onclick = () => handleSelection(optionElement, questionData, label);
+        optionElement.innerHTML = `<span class=\"option-label\">${label}.</span> ${option}`;
         optionsContainer.appendChild(optionElement);
       });
     }
 
-    function handleSelection(selectedOption, questionData, label, option) {
-      document.querySelectorAll('.option').forEach(option => option.onclick = null);
+    function handleSelection(selectedOption, questionData, label) {
+      // disable further clicks
+      document.querySelectorAll('.option').forEach(opt => opt.onclick = null);
       const nextButton = document.getElementById("next-button");
 
       if (label === questionData.correct_answer) {
         selectedOption.classList.add("correct");
       } else {
         selectedOption.classList.add("incorrect");
+        // highlight correct
         document.querySelectorAll('.option').forEach(opt => {
-          if (opt.innerText.includes(questionData.options[questionData.correct_answer])) {
+          if (opt.innerText.startsWith(questionData.correct_answer + '.')) {
             opt.classList.add("correct");
           }
         });
@@ -89,23 +99,46 @@
       const aiResponseContainer = document.getElementById("ai-response");
       aiResponseContainer.innerText = "Loading AI response...";
 
-      const response = await fetch("/get-ai-response", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: questionData.question,
-          options: questionData.options
-        })
-      });
-      const result = await response.json();
-      aiResponseContainer.innerText = result.ai_response;
+      try {
+        const response = await fetch("/get-ai-response", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: questionData.question,
+            options: questionData.options
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log("AI returned:", result);
+
+        // Extract fields
+        const answer = result["Correct Answer"];
+        const analysis = result["Option Analysis"];
+
+        // Render output
+        aiResponseContainer.innerHTML = `
+          <p><strong>Correct Answer:</strong> ${answer}</p>
+          <ul>
+            ${Object.entries(analysis)
+              .map(([opt, text]) => `<li><strong>${opt}:</strong> ${text}</li>`)
+              .join('')}
+          </ul>
+        `;
+      } catch (err) {
+        console.error(err);
+        aiResponseContainer.innerText = "Error loading AI response.";
+      }
     }
 
     function nextQuestion() {
       currentQuestionIndex++;
       if (currentQuestionIndex < quizData.length) {
         renderQuestion();
-        document.getElementById("ai-response").innerText = "";
       } else {
         showResults();
       }
@@ -113,7 +146,10 @@
 
     function showResults() {
       const quizBox = document.getElementById("quiz-box");
-      quizBox.innerHTML = `<h5 class="text-center">Quiz Completed!</h5><p class="text-center">Thank you for participating.</p>`;
+      quizBox.innerHTML = `
+        <h5 class="text-center">Quiz Completed!</h5>
+        <p class="text-center">Thank you for participating.</p>
+      `;
     }
 
     document.addEventListener("DOMContentLoaded", renderQuestion);

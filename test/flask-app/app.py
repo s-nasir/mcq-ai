@@ -1,5 +1,7 @@
 from flask import Flask, request, render_template, jsonify
-import google.generativeai as genai
+import json
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 import os
 
@@ -7,10 +9,9 @@ app = Flask(__name__)
 
 # Load environment variables
 load_dotenv()
-genai.configure(api_key=os.getenv("API_KEY"))
+MODEL_NAME = os.getenv("MODEL_NAME")
+API_KEY    = os.getenv("API_KEY")
 
-# Initialize model
-model = genai.GenerativeModel("tunedModels/mcq-test-gbx7vvyjdj3m")
 
 quiz_data = [
     {
@@ -80,37 +81,137 @@ def get_ai_response():
     question = data.get("question")
     options = data.get("options")
 
-    # Format prompt as a plain text string
-    prompt_text = f"Question: {question}\nOptions:\n"
-    prompt_text += "\n".join([f"{key}: {value}" for key, value in options.items()])
+    prompt_text = f'Question: "{question}"\nOptions:\n'
+    prompt_text += "\n".join([f'{key}: "{value}"' for key, value in options.items()])
 
-    # Send prompt to AI model
+    client = genai.Client(api_key="AIzaSyCyWw7UXnyepu89ady39ZF0QBkV5Mo8N50")
+    model = "learnlm-2.0-flash-experimental"  
+
+    contents = [
+        {
+            "role": "user",
+            "parts": [{"text": prompt_text}]
+        }
+    ]
+
+    generate_content_config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=genai.types.Schema(
+            type=genai.types.Type.OBJECT,
+            required=["Correct Answer", "Option Analysis"],
+            properties={
+                "Correct Answer": genai.types.Schema(
+                    type=genai.types.Type.STRING,
+                    enum=["A", "B", "C", "D"]
+                ),
+                "Option Analysis": genai.types.Schema(
+                    type = genai.types.Type.OBJECT,
+                    description = "Concise explanations for each option.",
+                    required = ["A", "B", "C", "D"],
+                    properties = {
+                        "A": genai.types.Schema(
+                            type = genai.types.Type.STRING,
+                            description = "Brief analysis of why option A is appropriate or inappropriate (max 90 characters).",
+                        ),
+                        "B": genai.types.Schema(
+                            type = genai.types.Type.STRING,
+                            description = "Brief analysis of why option B is appropriate or inappropriate (max 90 characters).",
+                        ),
+                        "C": genai.types.Schema(
+                            type = genai.types.Type.STRING,
+                            description = "Brief analysis of why option C is appropriate or inappropriate (max 90 characters).",
+                        ),
+                        "D": genai.types.Schema(
+                            type = genai.types.Type.STRING,
+                            description = "Brief analysis of why option D is appropriate or inappropriate (max 90 characters).",
+                        ),
+                    }
+                )
+            }
+        )
+    )
+
     try:
-        response = model.generate_content(prompt_text)  # Pass plain text string
-        ai_response = response.text if response else "No response from AI."
-    except Exception as e:
-        print(f"Error: {e}")
-        ai_response = "Error communicating with the AI."
+        response = client.models.generate_content(
+            model=model,
+            contents=contents,
+            config=generate_content_config
+        )
 
-    return jsonify({"ai_response": ai_response})
+    
+        raw_json = response.candidates[0].content.parts[0].text
+        structured_output = json.loads(raw_json)
 
-# Prompt Box route
+        return jsonify(structured_output)
+
+    except (IndexError, json.JSONDecodeError, Exception) as e:
+        print(f"AI error: {e}")
+        return jsonify({"error": "Failed to process AI response."})
+
+
+
 @app.route("/prompt-box", methods=["GET", "POST"])
 def prompt_box():
-    response_text = None
+    prompt_text   = None
+    structured   = None
+
     if request.method == "POST":
-        prompt = request.form["prompt"]
-        response_text = send_prompt_to_api(prompt)
-    return render_template("prompt-box.html", response=response_text)
+        prompt_text = request.form["prompt"]
+        structured  = send_prompt_to_api(prompt_text)
 
+    return render_template(
+        "prompt-box.html",
+        prompt=prompt_text,
+        result=structured
+    )
 
-def send_prompt_to_api(prompt):
+def send_prompt_to_api(prompt: str) -> dict:
+    client = genai.Client(api_key=API_KEY)
+    # build the same “Question… Options…” content block
+    contents = [
+        types.Content(
+            role="user",
+            parts=[ types.Part.from_text(text=prompt) ]
+        )
+    ]
+
+    # exactly the same schema you used in test.py
+    config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=genai.types.Schema(
+            type=genai.types.Type.OBJECT,
+            required=["Correct Answer", "Option Analysis"],
+            properties={
+                "Correct Answer": genai.types.Schema(
+                    type=genai.types.Type.STRING,
+                    enum=["A", "B", "C", "D"]
+                ),
+                "Option Analysis": genai.types.Schema(
+                    type=genai.types.Type.OBJECT,
+                    required=["A", "B", "C", "D"],
+                    properties={
+                        "A": genai.types.Schema(type=genai.types.Type.STRING),
+                        "B": genai.types.Schema(type=genai.types.Type.STRING),
+                        "C": genai.types.Schema(type=genai.types.Type.STRING),
+                        "D": genai.types.Schema(type=genai.types.Type.STRING),
+                    }
+                ),
+            }
+        )
+    )
+
     try:
-        response = model.generate_content(prompt)
-        return response.text if response else "No response from the API."
+        resp = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=contents,
+            config=config
+        )
+        raw_json = resp.candidates[0].content.parts[0].text
+        return json.loads(raw_json)
+
     except Exception as e:
-        print(f"Error: {e}")
-        return "Error communicating with the API."
+        app.logger.error(f"Prompt-box AI error: {e}")
+        return {"error": "Failed to parse AI response"}
 
 if __name__ == "__main__":
     app.run(debug=True)
