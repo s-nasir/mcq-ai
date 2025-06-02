@@ -7,11 +7,13 @@ import os
 
 app = Flask(__name__)
 
-# Load environment variables
+# ---- env variables ----
 load_dotenv()
 MODEL_NAME = os.getenv("MODEL_NAME")
 API_KEY    = os.getenv("API_KEY")
 
+
+# ---- date variables ----
 
 quiz_data = [
     {
@@ -58,7 +60,7 @@ quiz_data = [
         "question": "Question: While monitoring security cameras at a commercial research facility, you observe an unfamiliar person tailgating behind an authorized employee to access a secure area. The authorized employee appears unaware of the person following them. Company policy requires that all visitors be registered and escorted. Approaching unauthorized individuals can be risky, but failing to act might compromise sensitive information. What should you do?",
         "options": {
             "A": "Approach the unauthorized individual and the employee to confirmm their access authorization.",
-            "B": "Ignore the incident, assuming the person is a new employee who you haven't met yet. ",
+            "B": "Ignore the incident, assuming the person is a new employee who you haven't met yet.",
             "C": "Make a general announcement over the intercom reminding employees about tailgating policies. ",
             "D": "Review the footage later to determine if any security breach occurred before taking action."
         },
@@ -66,7 +68,10 @@ quiz_data = [
     }
 ]
 
-# Home route
+
+
+# ---- routes ----
+
 @app.route("/", methods=["GET"])
 def home():
     return render_template("index.html")
@@ -74,6 +79,8 @@ def home():
 @app.route("/mcq", methods=["GET"])
 def mcq():
     return render_template("mcq.html", quiz_data=quiz_data)
+
+#   ---- MCQ PAGE Functions ----
 
 @app.route("/get-ai-response", methods=["POST"])
 def get_ai_response():
@@ -149,6 +156,7 @@ def get_ai_response():
         return jsonify({"error": "Failed to process AI response."})
 
 
+#   ---- PROPMP PAGE Functions ----
 
 @app.route("/prompt-box", methods=["GET", "POST"])
 def prompt_box():
@@ -212,6 +220,9 @@ def send_prompt_to_api(prompt: str) -> dict:
     except Exception as e:
         app.logger.error(f"Prompt-box AI error: {e}")
         return {"error": "Failed to parse AI response"}
+
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)

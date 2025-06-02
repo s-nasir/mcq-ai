@@ -6,11 +6,11 @@
   <title>MCQ Quiz</title>
   <!-- Bootstrap CSS -->
   <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+   <link href="{{ url_for('static', filename='global.css') }}" rel="stylesheet">
   <style>
     body {
             font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            padding: 20px;
+            background-color: #EAEFEF;
         }
     .option {
       cursor: pointer;
@@ -30,16 +30,20 @@
   </style>
 </head>
 <body>
-  <nav>
-    <div class="row justify-content-md-center">
-      <div class="col col-lg-2">
-      <a href="/" class="btn btn-outline-danger btn-lg btn-block ml-2">Home</a>
-      </div>
-      <div class="col col-lg-2">
-      <a href="/prompt-box" class="btn btn-outline-danger btn-lg btn-block mr-2">Prompts</a>
-      </div>
-    </div>
-  </nav>
+  
+  <div class="nav">
+  <button onclick="location.href='/'" class="value">
+    Home
+  </button>
+  <button onclick="location.href='prompt-box'" class="value">
+    Prompt Analysis
+  </button>
+  <button onclick="location.href='mcq'" class="value">
+    MCQ Prototype
+  </button>
+</div>
+
+
   <div class="container mt-5">
     <h2 class="text-center">Quiz</h2>
     <div id="quiz-box" class="card p-4 mt-4">
@@ -147,8 +151,8 @@
     function showResults() {
       const quizBox = document.getElementById("quiz-box");
       quizBox.innerHTML = `
-        <h5 class="text-center">Quiz Completed!</h5>
-        <p class="text-center">Thank you for participating.</p>
+        <h5 class="text-center">You have completed my MCQ prototype testing!</h5>
+        <p class="text-center">Thank you for your participation.</p>
       `;
     }
 

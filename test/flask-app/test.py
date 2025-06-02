@@ -1,70 +1,84 @@
-# To run this code you need to install the following dependencies:
-# pip install google-genai
-
-import base64
+# app.py
 import os
-from google import genai
-from google.genai import types
+import json
+from flask import Flask, request, render_template, jsonify
+from openai import OpenAI
+from dotenv import load_dotenv
 
 
+
+# 2) Instantiate the OpenAI client
+client = OpenAI()  # automatically reads OPENAI_API_KEY from os.environ
+
+# 3) Read the instructions + schema from prompt.txt at startup
+PROMPT_FILE = os.path.join(os.path.dirname(__file__), "prompt.txt")
+try:
+    with open(PROMPT_FILE, "r", encoding="utf-8") as f:
+        instructions = f.read()
+except FileNotFoundError:
+    raise RuntimeError(f"Could not find {PROMPT_FILE}. Make sure it exists next to app.py")
+
+# 4) Define your three pre-written “user queries” (replace these with whatever you want)
+PRE_WRITTEN_INPUTS = {
+    "prompt1": "Create a security/concierge protocol behavioral mcq at a Commercial location.",
+    "prompt2": "Create a security/concierge protocol behavioral mcq at a Residential location.",
+    "prompt3": "Create a security/concierge protocol behavioral mcq at an Event location."
+}
+
+# 5) Your fine-tuned GPT-4o-mini model name/ID
+FINE_TUNED_MODEL = "gpt-4o-mini"
+
+app = Flask(__name__, template_folder="templates")
+
+
+@app.route("/prompt-test")
+def index():
+    """
+    Render the HTML page with three buttons and an empty response box.
+    """
+    return render_template("prompt-test.html")
+
+
+@app.route("/generate", methods=["POST"])
 def generate():
-    client = genai.Client(
-        api_key="AIzaSyCyWw7UXnyepu89ady39ZF0QBkV5Mo8N50"
-    )
+    """
+    Expects a JSON payload: { "prompt_id": "prompt1" }
+    Combines `instructions` (as a system message) + the user’s query (as a user message),
+    sends them to chat.completions.create, and returns the JSON‐parsed output.
+    """
+    data = request.get_json(force=True)
+    prompt_id = data.get("prompt_id", "")
 
-    model = "learnlm-2.0-flash-experimental"
-    contents = [
-        types.Content(
-            role="user",
-            parts=[
-                types.Part.from_text(text="""Question: "You witness a group of teenagers vandalizing a holiday display in a mall. How do you react? "Options: A: 'Quietly observe and report to mall management without confronting them.', B: 'Intervene immediately, asking them to stop and leave the mall.', C: 'Take video or photos to use as evidence later.', D: 'Call the police and wait for them to arrive before taking any action.'"""),
+    if prompt_id not in PRE_WRITTEN_INPUTS:
+        return (
+            jsonify({"error": "Invalid prompt_id. Use 'prompt1', 'prompt2', or 'prompt3'."}),
+            400,
+        )
+
+    user_input = PRE_WRITTEN_INPUTS[prompt_id]
+
+    try:
+        # 6) Call the chat completion endpoint with instructions as "system"
+        response = client.chat.completions.create(
+            model=FINE_TUNED_MODEL,
+            messages=[
+                {"role": "system", "content": instructions},
+                {"role": "user", "content": user_input}
             ],
-        ),
-    ]
-    generate_content_config = types.GenerateContentConfig(
-        response_mime_type="application/json",
-        response_schema=genai.types.Schema(
-            type = genai.types.Type.OBJECT,
-            required = ["Correct Answer", "Option Analysis"],
-            properties = {
-                "Correct Answer": genai.types.Schema(
-                    type = genai.types.Type.STRING,
-                    description = "The letter corresponding to the most appropriate response.",
-                    enum = ["A", "B", "C", "D"],
-                ),
-                "Option Analysis": genai.types.Schema(
-                    type = genai.types.Type.OBJECT,
-                    description = "Concise explanations for each option.",
-                    required = ["A", "B", "C", "D"],
-                    properties = {
-                        "A": genai.types.Schema(
-                            type = genai.types.Type.STRING,
-                            description = "Brief analysis of why option A is appropriate or inappropriate (max 90 characters).",
-                        ),
-                        "B": genai.types.Schema(
-                            type = genai.types.Type.STRING,
-                            description = "Brief analysis of why option B is appropriate or inappropriate (max 90 characters).",
-                        ),
-                        "C": genai.types.Schema(
-                            type = genai.types.Type.STRING,
-                            description = "Brief analysis of why option C is appropriate or inappropriate (max 90 characters).",
-                        ),
-                        "D": genai.types.Schema(
-                            type = genai.types.Type.STRING,
-                            description = "Brief analysis of why option D is appropriate or inappropriate (max 90 characters).",
-                        ),
-                    },
-                ),
-            },
-        ),
-    )
+            temperature=0.7,
+            max_tokens=300
+        )
 
-    for chunk in client.models.generate_content_stream(
-        model=model,
-        contents=contents,
-        config=generate_content_config,
-    ):
-        print(chunk.text, end="")
+        # 7) Extract the generated content
+        generated_text = response.choices[0].message.content
+
+
+        return jsonify({"response": generated_text})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
-    generate()
+    # By default, Flask runs on http://127.0.0.1:5000
+    app.run(debug=True)

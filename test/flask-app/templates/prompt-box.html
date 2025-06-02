@@ -8,22 +8,25 @@
     href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
     rel="stylesheet"
   />
+   <link href="{{ url_for('static', filename='global.css') }}" rel="stylesheet">
   <style>
-    body { background:#f5f5f5; padding:2rem; font-family:Arial,sans-serif; }
+    body { background:#EAEFEF; font-family:Arial,sans-serif; }
     .box { margin-top:1.5rem; padding:1rem; background:#fff; border-radius:.5rem; border:1px solid #ddd; white-space:pre-wrap; }
   </style>
 </head>
 <body>
-  <nav>
-    <div class="row justify-content-md-center">
-      <div class="col col-lg-2">
-      <a href="/" class="btn btn-outline-danger btn-lg btn-block ml-2">Home</a>
-      </div>
-      <div class="col col-lg-2">
-      <a href="/mcq" class="btn btn-outline-danger btn-lg btn-block mr-2">MCQ</a>
-      </div>
-    </div>
-  </nav>
+
+  <div class="nav">
+  <button onclick="location.href='/'" class="value">
+    Home
+  </button>
+  <button onclick="location.href='prompt-box'" class="value">
+    Prompt Analysis
+  </button>
+  <button onclick="location.href='mcq'" class="value">
+    MCQ Prototype
+  </button>
+</div>  
 
   <div class="container">
     <h1 class="text-center mt-5">Prompt Machine</h1>

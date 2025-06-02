@@ -1,0 +1,134 @@
+<!-- templates/prompt-text.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MCQ Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.6;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      margin: 0.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    #responseContainer {
+      margin-top: 1rem;
+      border: 1px solid #ccc;
+      padding: 1rem;
+      border-radius: 4px;
+      background: #f9f9f9;
+    }
+
+    #responseBox {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    /* Position the copy button below and aligned right */
+    #copyWrapper {
+      margin-top: 0.5rem;
+      text-align: right;
+    }
+
+    #copyButton {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>MCQ Generator</h1>
+
+  <p>Select one of the pre-written prompts to generate an MCQ:</p>
+  <div>
+    <button id="btn1">Prompt 1: Commercial</button>
+    <button id="btn2">Prompt 2: Residential</button>
+    <button id="btn3">Prompt 3: Event</button>
+  </div>
+
+  <!-- This container will only become visible after we get a response -->
+  <div id="responseContainer" style="display: none;">
+    <div id="responseBox">Waiting for response...</div>
+  </div>
+
+  <!-- Copy button moved outside the bordered box -->
+  <div id="copyWrapper" style="display: none;">
+    <button id="copyButton">Copy</button>
+  </div>
+
+  <script>
+    // 1) Cache DOM elements
+    const btn1 = document.getElementById("btn1");
+    const btn2 = document.getElementById("btn2");
+    const btn3 = document.getElementById("btn3");
+    const responseContainer = document.getElementById("responseContainer");
+    const responseBox = document.getElementById("responseBox");
+    const copyWrapper = document.getElementById("copyWrapper");
+    const copyButton = document.getElementById("copyButton");
+
+    // 2) Helper: POST to /generate with the given prompt_id, then display result
+    async function fetchMCQ(promptId) {
+      responseBox.textContent = "Waiting for response...";
+      responseContainer.style.display = "block";
+      copyWrapper.style.display = "none";
+
+      try {
+        const resp = await fetch("/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt_id: promptId })
+        });
+
+        if (!resp.ok) {
+          const errData = await resp.json();
+          responseBox.textContent = "Error: " + (errData.error || resp.statusText);
+          return;
+        }
+
+        const data = await resp.json();
+        responseBox.textContent = data.response;
+        copyWrapper.style.display = "block";
+      } catch (err) {
+        responseBox.textContent = "Network error: " + err.message;
+        copyWrapper.style.display = "block";
+      }
+    }
+
+    // 3) Copy to clipboard when user clicks "Copy"
+    copyButton.addEventListener("click", () => {
+      const text = responseBox.textContent;
+      navigator.clipboard.writeText(text).then(
+        () => {
+          copyButton.textContent = "Copied!";
+          setTimeout(() => (copyButton.textContent = "Copy"), 1500);
+        },
+        (err) => {
+          copyButton.textContent = "Failed to copy";
+          console.error("Clipboard error:", err);
+          setTimeout(() => (copyButton.textContent = "Copy"), 1500);
+        }
+      );
+    });
+
+    // 4) Attach event listeners to each prompt button
+    btn1.addEventListener("click", () => fetchMCQ("prompt1"));
+    btn2.addEventListener("click", () => fetchMCQ("prompt2"));
+    btn3.addEventListener("click", () => fetchMCQ("prompt3"));
+  </script>
+</body>
+</html>

@@ -4,24 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>Homepage</title>
-  <!-- Bootstrap CSS -->
   <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='global.css') }}" rel="stylesheet">
+  <style>
+    body { background:#EAEFEF; font-family:Arial,sans-serif; }
+  </style>
 </head>
 <body>
 
-  <div class="container text-center mt-5">
-    <h1>AI TEST</h1>
-    <p class="lead">Choose an option below</p>
+<div class="nav">
+  <button onclick="location.href='/'" class="value">
+    Home
+  </button>
+  <button onclick="location.href='prompt-box'" class="value">
+    Prompt Analysis
+  </button>
+  <button onclick="location.href='mcq'" class="value">
+    MCQ Prototype
+  </button>
+</div>
 
-    <div class="row mt-4">
-      <div class="col-md-6">
-        <a href="/prompt-box" class="btn btn-primary btn-lg btn-block">Prompt Box</a>
-      </div>
-      <div class="col-md-6">
-        <a href="/mcq" class="btn btn-secondary btn-lg btn-block">MCQ</a>
-      </div>
-    </div>
+  <div class="container anton-regular text-center mt-5">
+    <h1 style="font-size: 95px;">ThinkTrain</h1>  
   </div>
+      
+  <div class="mainbox archivo-p">
+  <p style="color: #EAEFEF; font-size: 22px;">ThinkTrain is an AI-driven application that modernizes employee training through interactive MCQs and real-time explanations. Designed to improve policy understanding and behavioral response in real-world scenarios.</p>
+
+
+  </div>  
+  
+
 
   <!-- Bootstrap JS and dependencies -->
   <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
