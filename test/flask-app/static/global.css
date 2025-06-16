@@ -8,7 +8,7 @@
   display: flex;
   flex-direction: row;
   width: fit-content;
-  background-color: #1a1c23;
+  background-color: #245294;
   justify-content: center;
   border-radius: 5px;
   gap: 7.5px;
@@ -39,7 +39,7 @@
 .value:not(:active):hover,
 .active,
 .value:focus {
-  background-color: #3f4555;
+  background-color: #6b9cdb;
 }
 
 .value:focus,
@@ -55,7 +55,7 @@
   right: 0px;
   width: 100%;
   height: 1px;
-  background-color: #1a1c23;
+  background-color: #245294;
   border-radius: 5px;
   opacity: 0;
 }
@@ -75,6 +75,62 @@
   margin-top: 1px;
 }
 
+/* BUTTON STYLES */
+
+.button {
+  border: none;
+  display: block;
+  position: relative;
+  padding: 0.7em 2.4em;
+  font-size: 18px;
+  background: transparent;
+  cursor: pointer;
+  user-select: none;
+  overflow: hidden;
+  color: #EAEFEF;
+  z-index: 1;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.button span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  z-index: -1;
+  border: 4px solid #EAEFEF;
+}
+
+.button span::before {
+  content: "";
+  display: block;
+  position: absolute;
+  width: 8%;
+  height: 500%;
+  background: var(--lightgray);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-60deg);
+  transition: all 0.3s;
+}
+
+.button:hover span::before {
+  transform: translate(-50%, -50%) rotate(-90deg);
+  width: 100%;
+  background: #EAEFEF;
+}
+
+.button:hover {
+  color: #102542;
+}
+
+.button:active span::before {
+  background: #EAEFEF;
+}
+
 /* Styles */
 
 .anton-regular {
@@ -83,14 +139,38 @@
   font-style: normal;
 }
 
-.mainbox{
-  background-color: #3f4555;
-  width: 65rem;
-  height: 30rem;
-  margin-left: auto;
-  margin-right: auto;
+.flex-grid {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.mainbox {
+  background-color: #245294;
+  width: 35rem;
+  height: 27rem;
   border-radius: 10px;
   padding: 3rem;
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.mainbox .button {
+  margin: 0 auto;
+  display: block;
+}
+
+.archivo-h {
+  font-family: "Archivo", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 700;
+  font-style: normal;
+  font-variation-settings:
+    "wdth" 100;
 }
 
 .archivo-p {

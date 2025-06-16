@@ -13,27 +13,44 @@
 <body>
 
 <div class="nav">
-  <button onclick="location.href='/'" class="value">
+  <button onclick="location.href='/'" class="value archivo-p">
     Home
   </button>
-  <button onclick="location.href='prompt-box'" class="value">
+  <button onclick="location.href='prompt-box'" class="value archivo-p">
     Prompt Analysis
   </button>
-  <button onclick="location.href='mcq'" class="value">
+  <button onclick="location.href='mcq'" class="value archivo-p">
     MCQ Prototype
   </button>
 </div>
 
-  <div class="container anton-regular text-center mt-5">
-    <h1 style="font-size: 95px;">ThinkTrain</h1>  
+  <div class="container mt-5">
+    <h1 class="text-center anton-regular" style="font-size: 95px;">ThinkTrain</h1>  
+    <p class="archivo-p" style=" font-size: 22px; padding-left: 5rem; padding-right: 5rem;">ThinkTrain is an AI-driven application that modernizes employee training through interactive MCQs and real-time explanations.</p>
   </div>
-      
-  <div class="mainbox archivo-p">
-  <p style="color: #EAEFEF; font-size: 22px;">ThinkTrain is an AI-driven application that modernizes employee training through interactive MCQs and real-time explanations. Designed to improve policy understanding and behavioral response in real-world scenarios.</p>
-
-
-  </div>  
-  
+    
+  <div class="container flex-grid">
+    <div class="mainbox archivo-p flex-item flex-column">
+      <h3 class="text-center archivo-h" style="color: #EAEFEF; font-size: 70px;">Test it out</h3>
+      <br>
+      <p style="color: #EAEFEF; font-size: 22px;">MCQ's designed to improve policy understanding and behavioral response in real-world scenarios</p>
+      <br>
+      <button onclick="location.href='mcq'" class="button ">
+        <span></span>
+        Try MCQ's
+      </button>
+    </div>  
+    <div class="mainbox archivo-p flex-item flex-column">
+      <h3 class="text-center archivo-h" style="color: #EAEFEF; font-size: 70px;">How it works</h3>
+      <br>
+      <p style="color: #EAEFEF; font-size: 22px;">Generate your own questions and understand prompt structures with our prompt machine</p>
+      <br>
+      <button onclick="location.href='prompt-box'" class="button ">
+        <span></span>
+        Test Prompts
+      </button>
+    </div> 
+  </div>
 
 
   <!-- Bootstrap JS and dependencies -->
