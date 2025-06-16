@@ -15,8 +15,11 @@ from logger import setup_logger
 # Initialize Flask app
 app = Flask(__name__)
 
+# Load environment variables
+load_dotenv()
+
 # Load configuration
-config_name = os.getenv('FLASK_CONFIG', 'default')
+config_name = os.getenv('FLASK_CONFIG', 'production')  # Default to production
 app.config.from_object(config[config_name])
 
 # Initialize extensions
@@ -315,4 +318,6 @@ def generate():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    port = int(os.environ.get('PORT', 5000))
+    app.logger.info(f"Starting application on port {port}")
+    app.run(host='0.0.0.0', port=port)
