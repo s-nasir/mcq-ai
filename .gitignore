@@ -3,4 +3,4 @@ test/data-prep/venv/
 test/flask-app/venv/
 test/flask-app/__pycache__/
 web-app/
-
+test/flask-app/.env
