@@ -4,14 +4,38 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 import os
+from openai import OpenAI
 
 app = Flask(__name__)
 
 # ---- env variables ----
 load_dotenv()
 MODEL_NAME = os.getenv("MODEL_NAME")
-API_KEY    = os.getenv("API_KEY")
+API_KEY = os.getenv("API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# Initialize OpenAI client
+if not OPENAI_API_KEY:
+    raise RuntimeError("OPENAI_API_KEY environment variable is not set")
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+# Read the instructions + schema from prompt.txt at startup
+PROMPT_FILE = os.path.join(os.path.dirname(__file__), "prompt.txt")
+try:
+    with open(PROMPT_FILE, "r", encoding="utf-8") as f:
+        instructions = f.read()
+except FileNotFoundError:
+    raise RuntimeError(f"Could not find {PROMPT_FILE}. Make sure it exists next to app.py")
+
+# Define pre-written user queries
+PRE_WRITTEN_INPUTS = {
+    "prompt1": "Create a security/concierge protocol behavioral mcq at a Commercial location.",
+    "prompt2": "Create a security/concierge protocol behavioral mcq at a Residential location.",
+    "prompt3": "Create a security/concierge protocol behavioral mcq at an Event location."
+}
+
+# Your fine-tuned GPT-4o-mini model name/ID
+FINE_TUNED_MODEL = "gpt-4o-mini"
 
 # ---- date variables ----
 
@@ -175,7 +199,6 @@ def prompt_box():
 
 def send_prompt_to_api(prompt: str) -> dict:
     client = genai.Client(api_key=API_KEY)
-    # build the same “Question… Options…” content block
     contents = [
         types.Content(
             role="user",
@@ -183,7 +206,6 @@ def send_prompt_to_api(prompt: str) -> dict:
         )
     ]
 
-    # exactly the same schema you used in test.py
     config = types.GenerateContentConfig(
         response_mime_type="application/json",
         response_schema=genai.types.Schema(
@@ -222,6 +244,52 @@ def send_prompt_to_api(prompt: str) -> dict:
         return {"error": "Failed to parse AI response"}
 
 
+# ---- New Prompt Testing Routes ----
+
+@app.route("/prompt-test")
+def prompt_test():
+    """
+    Render the HTML page with three buttons and an empty response box.
+    """
+    return render_template("prompt-test.html")
+
+@app.route("/generate", methods=["POST"])
+def generate():
+    """
+    Expects a JSON payload: { "prompt_id": "prompt1" }
+    Combines `instructions` (as a system message) + the user's query (as a user message),
+    sends them to chat.completions.create, and returns the JSON-parsed output.
+    """
+    data = request.get_json(force=True)
+    prompt_id = data.get("prompt_id", "")
+
+    if prompt_id not in PRE_WRITTEN_INPUTS:
+        return (
+            jsonify({"error": "Invalid prompt_id. Use 'prompt1', 'prompt2', or 'prompt3'."}),
+            400,
+        )
+
+    user_input = PRE_WRITTEN_INPUTS[prompt_id]
+
+    try:
+        # Call the chat completion endpoint with instructions as "system"
+        response = openai_client.chat.completions.create(
+            model=FINE_TUNED_MODEL,
+            messages=[
+                {"role": "system", "content": instructions},
+                {"role": "user", "content": user_input}
+            ],
+            temperature=0.7,
+            max_tokens=300
+        )
+
+        # Extract the generated content
+        generated_text = response.choices[0].message.content
+
+        return jsonify({"response": generated_text})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

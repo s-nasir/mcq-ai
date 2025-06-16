@@ -5,10 +5,16 @@ from flask import Flask, request, render_template, jsonify
 from openai import OpenAI
 from dotenv import load_dotenv
 
+# Load environment variables from .env file if it exists (for local development)
+load_dotenv()
 
+# Get API key from environment variable
+api_key = os.getenv('OPENAI_API_KEY')
+if not api_key:
+    raise RuntimeError("OPENAI_API_KEY environment variable is not set")
 
-# 2) Instantiate the OpenAI client
-client = OpenAI()  # automatically reads OPENAI_API_KEY from os.environ
+# Instantiate the OpenAI client with explicit API key
+client = OpenAI(api_key=api_key)
 
 # 3) Read the instructions + schema from prompt.txt at startup
 PROMPT_FILE = os.path.join(os.path.dirname(__file__), "prompt.txt")
@@ -18,7 +24,7 @@ try:
 except FileNotFoundError:
     raise RuntimeError(f"Could not find {PROMPT_FILE}. Make sure it exists next to app.py")
 
-# 4) Define your three pre-written “user queries” (replace these with whatever you want)
+# 4) Define your three pre-written "user queries" (replace these with whatever you want)
 PRE_WRITTEN_INPUTS = {
     "prompt1": "Create a security/concierge protocol behavioral mcq at a Commercial location.",
     "prompt2": "Create a security/concierge protocol behavioral mcq at a Residential location.",
@@ -43,8 +49,8 @@ def index():
 def generate():
     """
     Expects a JSON payload: { "prompt_id": "prompt1" }
-    Combines `instructions` (as a system message) + the user’s query (as a user message),
-    sends them to chat.completions.create, and returns the JSON‐parsed output.
+    Combines `instructions` (as a system message) + the user's query (as a user message),
+    sends them to chat.completions.create, and returns the JSON-parsed output.
     """
     data = request.get_json(force=True)
     prompt_id = data.get("prompt_id", "")
