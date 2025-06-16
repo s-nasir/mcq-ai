@@ -116,7 +116,7 @@ def get_ai_response():
     prompt_text += "\n".join([f'{key}: "{value}"' for key, value in options.items()])
 
     client = genai.Client(api_key="AIzaSyCyWw7UXnyepu89ady39ZF0QBkV5Mo8N50")
-    model = "learnlm-2.0-flash-experimental"  
+    model = "gemini-2.0-flash-lite"  
 
     contents = [
         {
