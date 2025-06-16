@@ -1,0 +1,11 @@
+flask==3.0.2
+python-dotenv==1.0.1
+openai==1.86.0
+google-genai==1.0.0
+flask-limiter==3.5.1
+flask-caching==2.1.0
+flask-talisman==1.1.0
+gunicorn==21.2.0
+python-json-logger==2.0.7
+werkzeug==3.0.1 
+waitress==3.0.0

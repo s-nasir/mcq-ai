@@ -5,19 +5,37 @@ from google.genai import types
 from dotenv import load_dotenv
 import os
 from openai import OpenAI
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_caching import Cache
+from flask_talisman import Talisman
+from config import config
+from logger import setup_logger
 
+# Initialize Flask app
 app = Flask(__name__)
 
-# ---- env variables ----
-load_dotenv()
-MODEL_NAME = os.getenv("MODEL_NAME")
-API_KEY = os.getenv("API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# Load configuration
+config_name = os.getenv('FLASK_CONFIG', 'default')
+app.config.from_object(config[config_name])
+
+# Initialize extensions
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[app.config['RATELIMIT_DEFAULT']]
+)
+cache = Cache(app)
+talisman = Talisman(app, content_security_policy=app.config['CONTENT_SECURITY_POLICY'])
+
+# Setup logging
+setup_logger(app)
 
 # Initialize OpenAI client
-if not OPENAI_API_KEY:
+if not app.config['OPENAI_API_KEY']:
+    app.logger.error("OPENAI_API_KEY environment variable is not set")
     raise RuntimeError("OPENAI_API_KEY environment variable is not set")
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
+openai_client = OpenAI(api_key=app.config['OPENAI_API_KEY'])
 
 # Read the instructions + schema from prompt.txt at startup
 PROMPT_FILE = os.path.join(os.path.dirname(__file__), "prompt.txt")
@@ -25,6 +43,7 @@ try:
     with open(PROMPT_FILE, "r", encoding="utf-8") as f:
         instructions = f.read()
 except FileNotFoundError:
+    app.logger.error(f"Could not find {PROMPT_FILE}")
     raise RuntimeError(f"Could not find {PROMPT_FILE}. Make sure it exists next to app.py")
 
 # Define pre-written user queries
@@ -92,10 +111,23 @@ quiz_data = [
     }
 ]
 
+# Error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    app.logger.error(f'Page not found: {request.url}')
+    return render_template('404.html'), 404
 
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f'Server Error: {error}')
+    return render_template('500.html'), 500
 
-# ---- routes ----
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    app.logger.warning(f'Rate limit exceeded: {request.remote_addr}')
+    return jsonify(error="Rate limit exceeded"), 429
 
+# Routes
 @app.route("/", methods=["GET"])
 def home():
     return render_template("index.html")
@@ -104,92 +136,93 @@ def home():
 def mcq():
     return render_template("mcq.html", quiz_data=quiz_data)
 
-#   ---- MCQ PAGE Functions ----
-
 @app.route("/get-ai-response", methods=["POST"])
+@limiter.limit("10 per minute")
+@cache.memoize(timeout=300)
 def get_ai_response():
-    data = request.json
-    question = data.get("question")
-    options = data.get("options")
-
-    prompt_text = f'Question: "{question}"\nOptions:\n'
-    prompt_text += "\n".join([f'{key}: "{value}"' for key, value in options.items()])
-
-    client = genai.Client(api_key="AIzaSyCyWw7UXnyepu89ady39ZF0QBkV5Mo8N50")
-    model = "learnlm-2.0-flash-experimental"  
-
-    contents = [
-        {
-            "role": "user",
-            "parts": [{"text": prompt_text}]
-        }
-    ]
-
-    generate_content_config = types.GenerateContentConfig(
-        response_mime_type="application/json",
-        response_schema=genai.types.Schema(
-            type=genai.types.Type.OBJECT,
-            required=["Correct Answer", "Option Analysis"],
-            properties={
-                "Correct Answer": genai.types.Schema(
-                    type=genai.types.Type.STRING,
-                    enum=["A", "B", "C", "D"]
-                ),
-                "Option Analysis": genai.types.Schema(
-                    type = genai.types.Type.OBJECT,
-                    description = "Concise explanations for each option.",
-                    required = ["A", "B", "C", "D"],
-                    properties = {
-                        "A": genai.types.Schema(
-                            type = genai.types.Type.STRING,
-                            description = "Brief analysis of why option A is appropriate or inappropriate (max 90 characters).",
-                        ),
-                        "B": genai.types.Schema(
-                            type = genai.types.Type.STRING,
-                            description = "Brief analysis of why option B is appropriate or inappropriate (max 90 characters).",
-                        ),
-                        "C": genai.types.Schema(
-                            type = genai.types.Type.STRING,
-                            description = "Brief analysis of why option C is appropriate or inappropriate (max 90 characters).",
-                        ),
-                        "D": genai.types.Schema(
-                            type = genai.types.Type.STRING,
-                            description = "Brief analysis of why option D is appropriate or inappropriate (max 90 characters).",
-                        ),
-                    }
-                )
-            }
-        )
-    )
-
     try:
+        data = request.json
+        question = data.get("question")
+        options = data.get("options")
+
+        if not question or not options:
+            app.logger.error("Missing question or options in request")
+            return jsonify({"error": "Missing required fields"}), 400
+
+        prompt_text = f'Question: "{question}"\nOptions:\n'
+        prompt_text += "\n".join([f'{key}: "{value}"' for key, value in options.items()])
+
+        client = genai.Client(api_key=app.config['API_KEY'])
+        model = app.config['MODEL_NAME']
+
+        contents = [
+            {
+                "role": "user",
+                "parts": [{"text": prompt_text}]
+            }
+        ]
+
+        generate_content_config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=genai.types.Schema(
+                type=genai.types.Type.OBJECT,
+                required=["Correct Answer", "Option Analysis"],
+                properties={
+                    "Correct Answer": genai.types.Schema(
+                        type=genai.types.Type.STRING,
+                        enum=["A", "B", "C", "D"]
+                    ),
+                    "Option Analysis": genai.types.Schema(
+                        type=genai.types.Type.OBJECT,
+                        description="Concise explanations for each option.",
+                        required=["A", "B", "C", "D"],
+                        properties={
+                            "A": genai.types.Schema(
+                                type=genai.types.Type.STRING,
+                                description="Brief analysis of why option A is appropriate or inappropriate (max 90 characters).",
+                            ),
+                            "B": genai.types.Schema(
+                                type=genai.types.Type.STRING,
+                                description="Brief analysis of why option B is appropriate or inappropriate (max 90 characters).",
+                            ),
+                            "C": genai.types.Schema(
+                                type=genai.types.Type.STRING,
+                                description="Brief analysis of why option C is appropriate or inappropriate (max 90 characters).",
+                            ),
+                            "D": genai.types.Schema(
+                                type=genai.types.Type.STRING,
+                                description="Brief analysis of why option D is appropriate or inappropriate (max 90 characters).",
+                            ),
+                        }
+                    )
+                }
+            )
+        )
+
         response = client.models.generate_content(
             model=model,
             contents=contents,
             config=generate_content_config
         )
 
-    
         raw_json = response.candidates[0].content.parts[0].text
         structured_output = json.loads(raw_json)
-
+        app.logger.info(f"Successfully generated AI response for question: {question[:50]}...")
         return jsonify(structured_output)
 
-    except (IndexError, json.JSONDecodeError, Exception) as e:
-        print(f"AI error: {e}")
-        return jsonify({"error": "Failed to process AI response."})
-
-
-#   ---- PROPMP PAGE Functions ----
+    except Exception as e:
+        app.logger.error(f"Error in get_ai_response: {str(e)}")
+        return jsonify({"error": "Failed to process AI response."}), 500
 
 @app.route("/prompt-box", methods=["GET", "POST"])
+@limiter.limit("20 per minute")
 def prompt_box():
-    prompt_text   = None
-    structured   = None
+    prompt_text = None
+    structured = None
 
     if request.method == "POST":
         prompt_text = request.form["prompt"]
-        structured  = send_prompt_to_api(prompt_text)
+        structured = send_prompt_to_api(prompt_text)
 
     return render_template(
         "prompt-box.html",
@@ -197,84 +230,74 @@ def prompt_box():
         result=structured
     )
 
+@cache.memoize(timeout=300)
 def send_prompt_to_api(prompt: str) -> dict:
-    client = genai.Client(api_key=API_KEY)
-    contents = [
-        types.Content(
-            role="user",
-            parts=[ types.Part.from_text(text=prompt) ]
-        )
-    ]
-
-    config = types.GenerateContentConfig(
-        response_mime_type="application/json",
-        response_schema=genai.types.Schema(
-            type=genai.types.Type.OBJECT,
-            required=["Correct Answer", "Option Analysis"],
-            properties={
-                "Correct Answer": genai.types.Schema(
-                    type=genai.types.Type.STRING,
-                    enum=["A", "B", "C", "D"]
-                ),
-                "Option Analysis": genai.types.Schema(
-                    type=genai.types.Type.OBJECT,
-                    required=["A", "B", "C", "D"],
-                    properties={
-                        "A": genai.types.Schema(type=genai.types.Type.STRING),
-                        "B": genai.types.Schema(type=genai.types.Type.STRING),
-                        "C": genai.types.Schema(type=genai.types.Type.STRING),
-                        "D": genai.types.Schema(type=genai.types.Type.STRING),
-                    }
-                ),
-            }
-        )
-    )
-
     try:
+        client = genai.Client(api_key=app.config['API_KEY'])
+        contents = [
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=prompt)]
+            )
+        ]
+
+        config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=genai.types.Schema(
+                type=genai.types.Type.OBJECT,
+                required=["Correct Answer", "Option Analysis"],
+                properties={
+                    "Correct Answer": genai.types.Schema(
+                        type=genai.types.Type.STRING,
+                        enum=["A", "B", "C", "D"]
+                    ),
+                    "Option Analysis": genai.types.Schema(
+                        type=genai.types.Type.OBJECT,
+                        required=["A", "B", "C", "D"],
+                        properties={
+                            "A": genai.types.Schema(type=genai.types.Type.STRING),
+                            "B": genai.types.Schema(type=genai.types.Type.STRING),
+                            "C": genai.types.Schema(type=genai.types.Type.STRING),
+                            "D": genai.types.Schema(type=genai.types.Type.STRING),
+                        }
+                    ),
+                }
+            )
+        )
+
         resp = client.models.generate_content(
-            model=MODEL_NAME,
+            model=app.config['MODEL_NAME'],
             contents=contents,
             config=config
         )
         raw_json = resp.candidates[0].content.parts[0].text
+        app.logger.info(f"Successfully processed prompt: {prompt[:50]}...")
         return json.loads(raw_json)
 
     except Exception as e:
-        app.logger.error(f"Prompt-box AI error: {e}")
+        app.logger.error(f"Error in send_prompt_to_api: {str(e)}")
         return {"error": "Failed to parse AI response"}
-
-
-# ---- New Prompt Testing Routes ----
 
 @app.route("/prompt-test")
 def prompt_test():
-    """
-    Render the HTML page with three buttons and an empty response box.
-    """
     return render_template("prompt-test.html")
 
 @app.route("/generate", methods=["POST"])
+@limiter.limit("10 per minute")
+@cache.memoize(timeout=300)
 def generate():
-    """
-    Expects a JSON payload: { "prompt_id": "prompt1" }
-    Combines `instructions` (as a system message) + the user's query (as a user message),
-    sends them to chat.completions.create, and returns the JSON-parsed output.
-    """
-    data = request.get_json(force=True)
-    prompt_id = data.get("prompt_id", "")
-
-    if prompt_id not in PRE_WRITTEN_INPUTS:
-        return (
-            jsonify({"error": "Invalid prompt_id. Use 'prompt1', 'prompt2', or 'prompt3'."}),
-            400,
-        )
-
-    user_input = PRE_WRITTEN_INPUTS[prompt_id]
-
     try:
-        # Call the chat completion endpoint with instructions as "system"
+        data = request.get_json(force=True)
+        prompt_id = data.get("prompt_id", "")
+
+        if prompt_id not in PRE_WRITTEN_INPUTS:
+            app.logger.warning(f"Invalid prompt_id received: {prompt_id}")
+            return jsonify({"error": "Invalid prompt_id. Use 'prompt1', 'prompt2', or 'prompt3'."}), 400
+
+        user_input = PRE_WRITTEN_INPUTS[prompt_id]
+
         response = openai_client.chat.completions.create(
-            model=FINE_TUNED_MODEL,
+            model=app.config['FINE_TUNED_MODEL'],
             messages=[
                 {"role": "system", "content": instructions},
                 {"role": "user", "content": user_input}
@@ -283,14 +306,13 @@ def generate():
             max_tokens=300
         )
 
-        # Extract the generated content
         generated_text = response.choices[0].message.content
-
+        app.logger.info(f"Successfully generated response for prompt_id: {prompt_id}")
         return jsonify({"response": generated_text})
 
     except Exception as e:
+        app.logger.error(f"Error in generate: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

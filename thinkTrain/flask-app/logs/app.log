@@ -1,0 +1,22 @@
+{"asctime": "2025-06-15 21:41:34,257", "levelname": "INFO", "name": "app", "message": "Application startup complete", "taskName": null}
+{"asctime": "2025-06-15 21:41:34,257", "levelname": "INFO", "name": "app", "message": "Application startup complete", "taskName": null}
+{"asctime": "2025-06-15 21:41:43,154", "levelname": "INFO", "name": "app", "message": "Application startup complete", "taskName": null}
+{"asctime": "2025-06-15 21:41:43,154", "levelname": "INFO", "name": "app", "message": "Application startup complete", "taskName": null}
+{"asctime": "2025-06-15 21:42:10,217", "levelname": "INFO", "name": "app", "message": "Application startup complete", "taskName": null}
+{"asctime": "2025-06-15 21:42:10,217", "levelname": "INFO", "name": "app", "message": "Application startup complete", "taskName": null}
+{"asctime": "2025-06-15 21:52:44,560", "levelname": "INFO", "name": "app", "message": "Application startup complete", "taskName": null}
+{"asctime": "2025-06-15 21:52:44,560", "levelname": "INFO", "name": "app", "message": "Application startup complete", "taskName": null}
+{"asctime": "2025-06-15 21:52:44,984", "levelname": "INFO", "name": "waitress", "message": "Serving on http://0.0.0.0:5000", "taskName": null}
+{"asctime": "2025-06-15 21:53:18,270", "levelname": "ERROR", "name": "app", "message": "Page not found: http://localhost:5000/favicon.ico", "taskName": null}
+{"asctime": "2025-06-15 21:53:18,270", "levelname": "ERROR", "name": "app", "message": "Page not found: http://localhost:5000/favicon.ico", "taskName": null}
+{"asctime": "2025-06-15 21:53:29,520", "levelname": "INFO", "name": "root", "message": "AFC is enabled with max remote calls: 10.", "taskName": null}
+{"asctime": "2025-06-15 21:53:37,010", "levelname": "INFO", "name": "root", "message": "AFC remote call 1 is done.", "taskName": null}
+{"asctime": "2025-06-15 21:53:37,011", "levelname": "INFO", "name": "app", "message": "Successfully generated AI response for question: As a security officer at a condominium complex, yo...", "taskName": null}
+{"asctime": "2025-06-15 21:53:37,011", "levelname": "INFO", "name": "app", "message": "Successfully generated AI response for question: As a security officer at a condominium complex, yo...", "taskName": null}
+{"asctime": "2025-06-15 21:53:49,714", "levelname": "INFO", "name": "httpx", "message": "HTTP Request: POST https://api.openai.com/v1/chat/completions \"HTTP/1.1 200 OK\"", "taskName": null}
+{"asctime": "2025-06-15 21:53:49,728", "levelname": "INFO", "name": "app", "message": "Successfully generated response for prompt_id: prompt3", "taskName": null}
+{"asctime": "2025-06-15 21:53:49,728", "levelname": "INFO", "name": "app", "message": "Successfully generated response for prompt_id: prompt3", "taskName": null}
+{"asctime": "2025-06-15 21:53:53,965", "levelname": "INFO", "name": "root", "message": "AFC is enabled with max remote calls: 10.", "taskName": null}
+{"asctime": "2025-06-15 21:53:58,355", "levelname": "INFO", "name": "root", "message": "AFC remote call 1 is done.", "taskName": null}
+{"asctime": "2025-06-15 21:53:58,356", "levelname": "INFO", "name": "app", "message": "Successfully processed prompt: Question: During an outdoor event, you notice a gr...", "taskName": null}
+{"asctime": "2025-06-15 21:53:58,356", "levelname": "INFO", "name": "app", "message": "Successfully processed prompt: Question: During an outdoor event, you notice a gr...", "taskName": null}
