@@ -15,12 +15,24 @@
   margin-top: 1rem;
   margin-left: auto;
   margin-right: auto;
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
   padding-left: 10px;
   padding-right: 10px;
   transition: all 0.2s ease;
   border: 1px solid #310f446b;
   font-size: 0.9rem;
+  position: relative;
+}
+
+.nav::after {
+  content: '';
+  position: absolute;
+  bottom: -1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #24529440, transparent);
 }
 
 .value {
@@ -189,5 +201,21 @@
   font-style: normal;
   font-variation-settings:
     "wdth" 100;
+}
+
+/* Section Dividers */
+.column {
+  padding: 20px;
+  position: relative;
+}
+
+.column:first-child::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 10%;
+  height: 80%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, #24529440, transparent);
 }
 
