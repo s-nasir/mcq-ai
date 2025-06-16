@@ -12,6 +12,28 @@
   <style>
     body { background:#EAEFEF; font-family:Arial,sans-serif; }
     .box { margin-top:1.5rem; padding:1rem; background:#fff; border-radius:.5rem; border:1px solid #ddd; white-space:pre-wrap; }
+    .column { padding: 20px; }
+    .response-container {
+      margin-top: 1rem;
+      border: 1px solid #ccc;
+      padding: 1rem;
+      border-radius: 4px;
+      background: #f9f9f9;
+      display: none;
+    }
+    .response-box {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .copy-wrapper {
+      margin-top: 0.5rem;
+      text-align: right;
+      display: none;
+    }
+    .copy-button {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
@@ -28,37 +50,121 @@
   </button>
 </div>  
 
-  <div class="container">
-    <h1 class="text-center mt-5">Prompt Machine</h1>
-    <form method="POST">
-      <div class="form-group">
-        <label for="prompt">Enter your structured prompt:</label>
-        <textarea id="prompt" name="prompt" class="form-control" rows="4" required>{{ prompt or "" }}</textarea>
-      </div>
-      <div class="text-center">
-        <button type="submit" class="btn btn-primary">Submit</button>
-      </div>
-    </form>
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Left Column - MCQ Generator -->
+      <div class="col-md-6 column">
+        <h2 class="text-center">MCQ Generator</h2>
+        <p>Select one of the pre-written prompts to generate an MCQ:</p>
+        <div class="text-center">
+          <button id="btn1" class="btn btn-primary m-1">Prompt 1: Commercial</button>
+          <button id="btn2" class="btn btn-primary m-1">Prompt 2: Residential</button>
+          <button id="btn3" class="btn btn-primary m-1">Prompt 3: Event</button>
+        </div>
 
-    {% if result %}
-      {% if result.error %}
-        <div class="alert alert-danger mt-4">{{ result.error }}</div>
-      {% else %}
-        <h2 class="mt-4">AI Structured Response</h2>
-        <div class="container">
-          <p><strong>Correct Answer:</strong> {{ result["Correct Answer"] }}</p>
-          <p><strong>Option Analysis:</strong></p>
-          <ul>
-            {% for opt, text in result["Option Analysis"].items() %}
-              <li><strong>{{ opt }}:</strong> {{ text }}</li>
-            {% endfor %}
-          </ul>
+        <div id="responseContainer" class="response-container">
+          <div id="responseBox" class="response-box">Waiting for response...</div>
         </div>
-        <div class="text-center mt-4">
-          <a href="/prompt-box" class="btn btn-success">New Prompt</a>
+
+        <div id="copyWrapper" class="copy-wrapper">
+          <button id="copyButton" class="btn btn-secondary copy-button">Copy</button>
         </div>
-      {% endif %}
-    {% endif %}
+      </div>
+
+      <!-- Right Column - Prompt Analysis -->
+      <div class="col-md-6 column">
+        <h2 class="text-center">Prompt Analysis</h2>
+        <form method="POST">
+          <div class="form-group">
+            <label for="prompt">Enter your structured prompt:</label>
+            <textarea id="prompt" name="prompt" class="form-control" rows="4" required>{{ prompt or "" }}</textarea>
+          </div>
+          <div class="text-center">
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </div>
+        </form>
+
+        {% if result %}
+          {% if result.error %}
+            <div class="alert alert-danger mt-4">{{ result.error }}</div>
+          {% else %}
+            <h3 class="mt-4">AI Structured Response</h3>
+            <div class="container">
+              <p><strong>Correct Answer:</strong> {{ result["Correct Answer"] }}</p>
+              <p><strong>Option Analysis:</strong></p>
+              <ul>
+                {% for opt, text in result["Option Analysis"].items() %}
+                  <li><strong>{{ opt }}:</strong> {{ text }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            <div class="text-center mt-4">
+              <a href="/prompt-box" class="btn btn-success">New Prompt</a>
+            </div>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
   </div>
+
+  <script>
+    // Cache DOM elements
+    const btn1 = document.getElementById("btn1");
+    const btn2 = document.getElementById("btn2");
+    const btn3 = document.getElementById("btn3");
+    const responseContainer = document.getElementById("responseContainer");
+    const responseBox = document.getElementById("responseBox");
+    const copyWrapper = document.getElementById("copyWrapper");
+    const copyButton = document.getElementById("copyButton");
+
+    // Helper: POST to /generate with the given prompt_id, then display result
+    async function fetchMCQ(promptId) {
+      responseBox.textContent = "Waiting for response...";
+      responseContainer.style.display = "block";
+      copyWrapper.style.display = "none";
+
+      try {
+        const resp = await fetch("/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt_id: promptId })
+        });
+
+        if (!resp.ok) {
+          const errData = await resp.json();
+          responseBox.textContent = "Error: " + (errData.error || resp.statusText);
+          return;
+        }
+
+        const data = await resp.json();
+        responseBox.textContent = data.response;
+        copyWrapper.style.display = "block";
+      } catch (err) {
+        responseBox.textContent = "Network error: " + err.message;
+        copyWrapper.style.display = "block";
+      }
+    }
+
+    // Copy to clipboard when user clicks "Copy"
+    copyButton.addEventListener("click", () => {
+      const text = responseBox.textContent;
+      navigator.clipboard.writeText(text).then(
+        () => {
+          copyButton.textContent = "Copied!";
+          setTimeout(() => (copyButton.textContent = "Copy"), 1500);
+        },
+        (err) => {
+          copyButton.textContent = "Failed to copy";
+          console.error("Clipboard error:", err);
+          setTimeout(() => (copyButton.textContent = "Copy"), 1500);
+        }
+      );
+    });
+
+    // Attach event listeners to each prompt button
+    btn1.addEventListener("click", () => fetchMCQ("prompt1"));
+    btn2.addEventListener("click", () => fetchMCQ("prompt2"));
+    btn3.addEventListener("click", () => fetchMCQ("prompt3"));
+  </script>
 </body>
 </html>
